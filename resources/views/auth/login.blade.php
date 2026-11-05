@@ -38,5 +38,7 @@
             <button type="submit" class="btn btn-primary">Entrar</button>
         </div>
     </form>
+
+    <p class="auth-switch">¿No tienes cuenta? <a href="{{ route('register') }}">Registrarse</a></p>
 </section>
 @endsection

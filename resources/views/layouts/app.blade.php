@@ -259,6 +259,10 @@
         .google-mark { font: 700 1.1rem Arial, sans-serif; color: #4285f4; }
         .login-divider { display: flex; align-items: center; gap: 12px; margin: 22px 0; color: var(--muted); font-size: 0.85rem; }
         .login-divider::before, .login-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+        .auth-description { color: var(--muted); line-height: 1.6; margin-bottom: 20px; }
+        .auth-switch { color: var(--muted); margin-top: 22px; text-align: center; }
+        .auth-switch a { color: var(--primary); font-weight: 700; }
+        .verification-logout { margin-top: 12px; }
         .remember-option { display: flex; align-items: center; gap: 10px; color: var(--muted); font-weight: 500; }
         .remember-option input { width: 18px; height: 18px; accent-color: var(--primary); }
 

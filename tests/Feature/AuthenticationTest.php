@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Models\Note;
 use App\Models\User;
 use Database\Seeders\OwnerSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -33,7 +32,8 @@ class AuthenticationTest extends TestCase
 
     public function test_guest_cannot_fetch_note_audio(): void
     {
-        $note = Note::query()->create([
+        $owner = User::factory()->create();
+        $note = $owner->notes()->create([
             'title' => 'Private note',
             'content' => 'Private content',
             'audio_file' => 'audio/private.mp3',
@@ -47,13 +47,14 @@ class AuthenticationTest extends TestCase
     {
         Storage::fake('public');
         Storage::disk('public')->put('audio/private.mp3', 'audio contents');
-        $note = Note::query()->create([
+        $owner = User::factory()->create();
+        $note = $owner->notes()->create([
             'title' => 'Private note',
             'content' => 'Private content',
             'audio_file' => 'audio/private.mp3',
         ]);
 
-        $this->actingAs(User::factory()->create())
+        $this->actingAs($owner)
             ->get(route('notes.audio', $note))
             ->assertOk()
             ->assertHeaderContains('Content-Disposition', 'inline');
@@ -93,9 +94,14 @@ class AuthenticationTest extends TestCase
         $this->assertGuest();
     }
 
-    public function test_public_registration_is_not_available(): void
+    public function test_registration_page_offers_email_registration(): void
     {
-        $this->get('/register')->assertNotFound();
+        $this->get(route('register'))
+            ->assertOk()
+            ->assertSee('Crear cuenta')
+            ->assertSee('Correo electrónico')
+            ->assertSee('Contraseña (mínimo 12 caracteres)')
+            ->assertSee('Confirmar contraseña');
     }
 
     public function test_repeated_login_failures_are_rate_limited(): void

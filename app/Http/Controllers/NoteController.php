@@ -13,9 +13,9 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class NoteController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
-        $notes = Note::query()->latest()->get();
+        $notes = $request->user()->notes()->latest()->get();
 
         return view('notes.index', [
             'notes' => $notes,
@@ -38,18 +38,21 @@ class NoteController extends Controller
         $data['audio_file'] = $this->storeAudio($request);
         $data['is_poetic'] = ($data['note_type'] ?? 'text') === 'poem';
 
-        Note::create($data);
+        $request->user()->notes()->create($data);
 
         return redirect()->route('notes.index');
     }
 
-    public function show(Note $note): View
+    public function show(Request $request, Note $note): View
     {
+        $note = $this->ownedNote($request, $note);
+
         return view('notes.show', compact('note'));
     }
 
-    public function audio(Note $note): StreamedResponse
+    public function audio(Request $request, Note $note): StreamedResponse
     {
+        $note = $this->ownedNote($request, $note);
         abort_unless($note->audio_file, 404);
 
         if (str_starts_with($note->audio_file, 'gdrive:')) {
@@ -61,8 +64,10 @@ class NoteController extends Controller
         return Storage::disk('public')->response($note->audio_file);
     }
 
-    public function edit(Note $note): View
+    public function edit(Request $request, Note $note): View
     {
+        $note = $this->ownedNote($request, $note);
+
         return view('notes.form', [
             'note' => $note,
             'mode' => 'edit',
@@ -71,6 +76,7 @@ class NoteController extends Controller
 
     public function update(Request $request, Note $note): RedirectResponse
     {
+        $note = $this->ownedNote($request, $note);
         $data = $this->validated($request);
         unset($data['audio_file']);
         $data['is_poetic'] = ($data['note_type'] ?? $note->note_type) === 'poem';
@@ -87,13 +93,17 @@ class NoteController extends Controller
         return redirect()->route('notes.show', $note);
     }
 
-    public function confirmDelete(Note $note): View
+    public function confirmDelete(Request $request, Note $note): View
     {
+        $note = $this->ownedNote($request, $note);
+
         return view('notes.delete', compact('note'));
     }
 
-    public function destroy(Note $note): RedirectResponse
+    public function destroy(Request $request, Note $note): RedirectResponse
     {
+        $note = $this->ownedNote($request, $note);
+
         if ($note->audio_file) {
             $this->deleteAudio($note->audio_file);
         }
@@ -103,8 +113,10 @@ class NoteController extends Controller
         return redirect()->route('notes.index');
     }
 
-    public function transcribe(Note $note): JsonResponse
+    public function transcribe(Request $request, Note $note): JsonResponse
     {
+        $note = $this->ownedNote($request, $note);
+
         if (! $note->audio_file) {
             return response()->json([
                 'success' => false,
@@ -135,6 +147,8 @@ class NoteController extends Controller
 
     public function updateTranscription(Request $request, Note $note): JsonResponse
     {
+        $note = $this->ownedNote($request, $note);
+
         $note->update([
             'transcription' => $request->input('transcription', ''),
             'transcription_status' => 'completed',
@@ -170,8 +184,10 @@ class NoteController extends Controller
         ]);
     }
 
-    public function export(Note $note): JsonResponse
+    public function export(Request $request, Note $note): JsonResponse
     {
+        $note = $this->ownedNote($request, $note);
+
         $line = str_repeat('=', 50);
         $title = $note->title ?: 'Sin título';
 
@@ -227,6 +243,11 @@ TXT;
             'notes' => ['nullable', 'string'],
             'audio_file' => ['nullable', 'file', 'max:20480'],
         ]);
+    }
+
+    private function ownedNote(Request $request, Note $note): Note
+    {
+        return $request->user()->notes()->findOrFail($note->getKey());
     }
 
     private function storeAudio(Request $request): ?string

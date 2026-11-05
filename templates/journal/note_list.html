@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}Mis Notas - Journal{% endblock %}
+
+{% block content %}
+<h2>Mis Notas del Journal</h2>
+<p>Total de notas: <strong>{{ total_notes }}</strong></p>
+
+{% if notes %}
+    <div class="note-list">
+        {% for note in notes %}
+            <div class="note-card" onclick="window.location='{% url 'note_detail' note.pk %}'">
+                <h3>{{ note.title|truncatewords:5 }}</h3>
+                <p style="color: #666; margin: 10px 0;">{{ note.content|truncatewords:20 }}</p>
+                
+                <div>
+                    <span class="mood">{{ note.get_mood_display }}</span>
+                    <span style="display: inline-block; background: #e0d9cf; padding: 5px 10px; border-radius: 20px; font-size: 0.85rem; margin-left: 5px;">
+                        {{ note.get_note_type_display }}
+                    </span>
+                </div>
+                
+                <div class="date">
+                    📅 {{ note.created_at|date:"d/m/Y - H:i" }}
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div style="text-align: center; padding: 40px; color: #999;">
+        <p style="font-size: 1.2rem;">No tienes notas aún</p>
+        <p>Crea tu primera nota para comenzar a escribir</p>
+        <a href="{% url 'note_create' %}" class="btn btn-primary" style="margin-top: 20px;">
+            ✍️ Crear Primera Nota
+        </a>
+    </div>
+{% endif %}
+{% endblock %}

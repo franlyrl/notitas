@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+
+{% block title %}{{ note.title }} - Journal{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+<div style="max-width: 800px; margin: 0 auto;">
+    <div style="background: linear-gradient(135deg, #fffef5 0%, #f9f5e9 100%); padding: 30px; border-radius: 10px; border-left: 5px solid #d4a574;">
+        <h2 style="color: #8b4513; margin-bottom: 10px;">{{ note.title }}</h2>
+        
+        <div style="margin: 15px 0;">
+            <span class="mood">{{ note.get_mood_display }}</span>
+            <span style="display: inline-block; background: #e0d9cf; padding: 5px 10px; border-radius: 20px; font-size: 0.85rem; margin-left: 5px;">
+                {{ note.get_note_type_display }}
+            </span>
+        </div>
+        
+        <p style="color: #999; font-size: 0.9rem;">
+            📅 Creado: {{ note.created_at|date:"d/m/Y H:i" }}
+            {% if note.updated_at != note.created_at %}
+                <br>✏️ Actualizado: {{ note.updated_at|date:"d/m/Y H:i" }}
+            {% endif %}
+        </p>
+        
+        <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
+        
+        <div style="background: white; padding: 20px; border-radius: 5px; line-height: 1.8; color: #333; white-space: pre-wrap;">
+            {{ note.content }}
+        </div>
+        
+        {% if note.audio_file %}
+            <div style="margin-top: 30px; padding: 20px; background: #f0ebe0; border-radius: 8px;">
+                <h3 style="color: #8b4513; margin-bottom: 15px;">🎵 Audio</h3>
+                <audio controls style="width: 100%; margin-bottom: 15px;">
+                    <source src="{{ note.audio_file.url }}" type="audio/mpeg">
+                    Tu navegador no soporta el elemento de audio.
+                </audio>
+                
+                <button type="button" id="transcribe-btn" class="btn btn-primary" onclick="transcribeAudio()">
+                    🎙️ Transcribir Audio
+                </button>
+                
+                {% if note.transcription %}
+                    <div style="background: white; padding: 15px; border-radius: 5px; border-left: 3px solid #d4a574; margin-top: 15px;">
+                        <h4 style="color: #654321; margin-bottom: 10px;">📝 Transcripción</h4>
+                        <p style="white-space: pre-wrap;">{{ note.transcription }}</p>
+                        <button type="button" class="btn btn-primary" style="margin-top: 10px;" onclick="editTranscription()">
+                            ✏️ Editar Transcripción
+                        </button>
+                    </div>
+                {% endif %}
+            </div>
+        {% endif %}
+        
+        {% if note.is_poetic or note.note_type == 'poem' %}
+            <div style="margin-top: 30px; padding: 20px; background: #f0e8f0; border-radius: 8px;">
+                <h3 style="color: #8b4513; margin-bottom: 15px;">📖 Herramientas Poéticas</h3>
+                <button type="button" class="btn btn-primary" onclick="convertToPoetic('lines')">
+                    ➡️ Formato Líneas
+                </button>
+                <button type="button" class="btn btn-primary" onclick="convertToPoetic('stanza')">
+                    📄 Formato Estrofas
+                </button>
+                <button type="button" class="btn btn-primary" onclick="convertToPoetic('haiku')">
+                    🌸 Formato Haiku
+                </button>
+                <button type="button" class="btn btn-primary" onclick="convertToPoetic('free_verse')">
+                    🖋️ Verso Libre
+                </button>
+                
+                <div id="poetic-result" style="background: white; padding: 15px; border-radius: 5px; border-left: 3px solid #d4a574; margin-top: 15px; display: none;">
+                    <h4 style="color: #654321; margin-bottom: 10px;">✨ Resultado</h4>
+                    <p style="white-space: pre-wrap;" id="poetic-text"></p>
+                </div>
+            </div>
+        {% endif %}
+        
+        <div class="button-group" style="margin-top: 30px;">
+            <a href="{% url 'note_update' note.pk %}" class="btn btn-primary">✏️ Editar</a>
+            <button type="button" class="btn btn-primary" onclick="exportNote()">
+                📥 Exportar
+            </button>
+            <a href="{% url 'note_delete' note.pk %}" class="btn btn-danger">🗑️ Eliminar</a>
+            <a href="{% url 'note_list' %}" class="btn btn-secondary">← Volver</a>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Función para obtener CSRF token
+    function getCsrfToken() {
+        return document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
+               document.querySelector('input[name="csrfmiddlewaretoken"]')?.value ||
+               document.querySelector('div[data-csrf]')?.getAttribute('data-csrf') || '';
+    }
+    
+    // Transcribir audio
+    function transcribeAudio() {
+        const btn = document.getElementById('transcribe-btn');
+        btn.disabled = true;
+        btn.textContent = '🎙️ Transcribiendo...';
+        
+        fetch('/journal/api/nota/{{ note.pk }}/transcribir/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCsrfToken()
+            }
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                alert('✅ Audio transcrito exitosamente');
+                location.reload();
+            } else {
+                alert('❌ Error: ' + data.error);
+            }
+            btn.disabled = false;
+            btn.textContent = '🎙️ Transcribir Audio';
+        })
+        .catch(e => {
+            alert('❌ Error: ' + e);
+            btn.disabled = false;
+            btn.textContent = '🎙️ Transcribir Audio';
+        });
+    }
+    
+    // Convertir a poesía
+    function convertToPoetic(format) {
+        const text = `{{ note.content }}`;
+        
+        fetch('/journal/api/convertir-poesia/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: JSON.stringify({ text: text, format: format })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('poetic-result').style.display = 'block';
+                document.getElementById('poetic-text').textContent = data.poetic_text;
+            } else {
+                alert('❌ Error: ' + data.error);
+            }
+        })
+        .catch(e => alert('❌ Error: ' + e));
+    }
+    
+    // Exportar nota
+    function exportNote() {
+        fetch('/journal/api/nota/{{ note.pk }}/exportar/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCsrfToken()
+            }
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                const blob = new Blob([data.content], { type: 'text/plain' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = data.filename;
+                a.click();
+                URL.revokeObjectURL(url);
+            } else {
+                alert('❌ Error: ' + data.error);
+            }
+        })
+        .catch(e => alert('❌ Error: ' + e));
+    }
+</script>
+{% endblock %}

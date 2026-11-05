@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block title %}{% if mode == 'edit' %}Editar Nota{% else %}Nueva Nota{% endif %} - Journal{% endblock %}
+
+{% block content %}
+<div style="max-width: 800px; margin: 0 auto;">
+    <h2>{% if mode == 'edit' %}✏️ Editar Nota{% else %}✍️ Nueva Nota{% endif %}</h2>
+    
+    <form method="POST" enctype="multipart/form-data">
+        {% csrf_token %}
+        
+        <div class="form-group">
+            <label for="title">Título (Opcional)</label>
+            <input type="text" id="title" name="title" value="{% if note %}{{ note.title }}{% endif %}" placeholder="Dale un título a tu nota...">
+        </div>
+        
+        <div class="form-group">
+            <label for="content">Contenido *</label>
+            <textarea id="content" name="content" required placeholder="Expresa tus sentimientos, escribe poesía o lo que sientas...">{% if note %}{{ note.content }}{% endif %}</textarea>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            <div class="form-group">
+                <label for="note_type">Tipo de Nota</label>
+                <select id="note_type" name="note_type">
+                    <option value="text" {% if not note or note.note_type == 'text' %}selected{% endif %}>📝 Texto</option>
+                    <option value="poem" {% if note.note_type == 'poem' %}selected{% endif %}>📖 Poema</option>
+                    <option value="audio" {% if note.note_type == 'audio' %}selected{% endif %}>🎵 Audio</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="mood">¿Qué emoción describes?</label>
+                <select id="mood" name="mood">
+                    <option value="neutral" {% if not note or note.mood == 'neutral' %}selected{% endif %}>😐 Neutral</option>
+                    <option value="happy" {% if note.mood == 'happy' %}selected{% endif %}>😊 Feliz</option>
+                    <option value="sad" {% if note.mood == 'sad' %}selected{% endif %}>😢 Triste</option>
+                    <option value="angry" {% if note.mood == 'angry' %}selected{% endif %}>😠 Enojado</option>
+                    <option value="calm" {% if note.mood == 'calm' %}selected{% endif %}>😌 Tranquilo</option>
+                    <option value="anxious" {% if note.mood == 'anxious' %}selected{% endif %}>😰 Ansioso</option>
+                    <option value="creative" {% if note.mood == 'creative' %}selected{% endif %}>✨ Creativo</option>
+                    <option value="motivated" {% if note.mood == 'motivated' %}selected{% endif %}>💪 Motivado</option>
+                    <option value="thoughtful" {% if note.mood == 'thoughtful' %}selected{% endif %}>🤔 Pensativo</option>
+                    <option value="tired" {% if note.mood == 'tired' %}selected{% endif %}>😴 Cansado</option>
+                </select>
+            </div>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            <div class="form-group">
+                <label for="style">🎨 Estilo Visual</label>
+                <select id="style" name="style">
+                    <option value="paper" {% if not note or note.style == 'paper' %}selected{% endif %}>Paper</option>
+                    <option value="aurora" {% if note.style == 'aurora' %}selected{% endif %}>Aurora</option>
+                    <option value="midnight" {% if note.style == 'midnight' %}selected{% endif %}>Midnight</option>
+                    <option value="sunset" {% if note.style == 'sunset' %}selected{% endif %}>Sunset</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="font_style">✍️ Fuente</label>
+                <select id="font_style" name="font_style">
+                    <option value="serif" {% if not note or note.font_style == 'serif' %}selected{% endif %}>Serif</option>
+                    <option value="mono" {% if note.font_style == 'mono' %}selected{% endif %}>Monospace</option>
+                    <option value="handwritten" {% if note.font_style == 'handwritten' %}selected{% endif %}>Handwritten</option>
+                    <option value="poetic" {% if note.font_style == 'poetic' %}selected{% endif %}>Poetic</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label for="notes">📝 Notas Adicionales</label>
+            <textarea id="notes" name="notes" placeholder="Contexto, inspiración, o notas personales..." style="min-height: 100px;">{% if note %}{{ note.notes }}{% endif %}</textarea>
+        </div>
+        
+        <div class="form-group">
+            <label for="audio_file">🎵 Archivo de Audio (Opcional)</label>
+            <input type="file" id="audio_file" name="audio_file" accept="audio/*">
+            {% if note.audio_file %}
+                <p style="margin-top: 10px; font-size: 0.9rem; color: #666;">
+                    Archivo actual: {{ note.audio_file.name }}
+                </p>
+            {% endif %}
+        </div>
+        
+        <div class="button-group">
+            <button type="submit" class="btn btn-primary">
+                {% if mode == 'edit' %}✔️ Actualizar Nota{% else %}✍️ Guardar Nota{% endif %}
+            </button>
+            <a href="{% url 'note_list' %}" class="btn btn-secondary">← Cancelar</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

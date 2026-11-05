@@ -3,11 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\Note;
+use App\Services\GoogleDriveStorage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class NoteController extends Controller
 {
@@ -46,6 +48,19 @@ class NoteController extends Controller
         return view('notes.show', compact('note'));
     }
 
+    public function audio(Note $note): StreamedResponse
+    {
+        abort_unless($note->audio_file, 404);
+
+        if (str_starts_with($note->audio_file, 'gdrive:')) {
+            return app(GoogleDriveStorage::class)->stream(substr($note->audio_file, 7));
+        }
+
+        abort_unless(Storage::disk('public')->exists($note->audio_file), 404);
+
+        return Storage::disk('public')->response($note->audio_file);
+    }
+
     public function edit(Note $note): View
     {
         return view('notes.form', [
@@ -62,7 +77,7 @@ class NoteController extends Controller
 
         if ($path = $this->storeAudio($request)) {
             if ($note->audio_file) {
-                Storage::disk('public')->delete($note->audio_file);
+                $this->deleteAudio($note->audio_file);
             }
             $data['audio_file'] = $path;
         }
@@ -80,7 +95,7 @@ class NoteController extends Controller
     public function destroy(Note $note): RedirectResponse
     {
         if ($note->audio_file) {
-            Storage::disk('public')->delete($note->audio_file);
+            $this->deleteAudio($note->audio_file);
         }
 
         $note->delete();
@@ -220,7 +235,22 @@ TXT;
             return null;
         }
 
+        if (config('filesystems.audio_driver') === 'google_drive') {
+            return app(GoogleDriveStorage::class)->store($request->file('audio_file'));
+        }
+
         return $request->file('audio_file')->store('audio', 'public');
+    }
+
+    private function deleteAudio(string $audioFile): void
+    {
+        if (str_starts_with($audioFile, 'gdrive:')) {
+            app(GoogleDriveStorage::class)->delete(substr($audioFile, 7));
+
+            return;
+        }
+
+        Storage::disk('public')->delete($audioFile);
     }
 
     private function toLines(string $text): string

@@ -1,0 +1,85 @@
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    environment:
+      APP_NAME: Mi Journal
+      APP_ENV: production
+      APP_KEY: ${APP_KEY:?Set APP_KEY in .env.production}
+      APP_DEBUG: "false"
+      APP_URL: https://${APP_DOMAIN:?Set APP_DOMAIN in .env.production}
+      LOG_CHANNEL: stderr
+      DB_CONNECTION: mysql
+      DB_HOST: db
+      DB_PORT: "3306"
+      DB_DATABASE: ${DB_DATABASE:?Set DB_DATABASE in .env.production}
+      DB_USERNAME: ${DB_USERNAME:?Set DB_USERNAME in .env.production}
+      DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env.production}
+      SESSION_DRIVER: database
+      SESSION_SECURE_COOKIE: "true"
+      CACHE_STORE: database
+      QUEUE_CONNECTION: database
+      FILESYSTEM_DISK: public
+      AUDIO_STORAGE_DRIVER: ${AUDIO_STORAGE_DRIVER:-google_drive}
+      GOOGLE_DRIVE_CLIENT_ID: ${GOOGLE_DRIVE_CLIENT_ID:?Set GOOGLE_DRIVE_CLIENT_ID in .env.production}
+      GOOGLE_DRIVE_CLIENT_SECRET: ${GOOGLE_DRIVE_CLIENT_SECRET:?Set GOOGLE_DRIVE_CLIENT_SECRET in .env.production}
+      GOOGLE_DRIVE_REDIRECT_URI: ${GOOGLE_DRIVE_REDIRECT_URI:?Set GOOGLE_DRIVE_REDIRECT_URI in .env.production}
+      GOOGLE_LOGIN_REDIRECT_URI: ${GOOGLE_LOGIN_REDIRECT_URI:?Set GOOGLE_LOGIN_REDIRECT_URI in .env.production}
+      OWNER_NAME: ${OWNER_NAME:-Owner}
+      OWNER_EMAIL: ${OWNER_EMAIL:?Set OWNER_EMAIL in .env.production}
+      OWNER_PASSWORD: ${OWNER_PASSWORD:?Set OWNER_PASSWORD in .env.production}
+    volumes:
+      - app_uploads:/var/www/html/storage/app/public
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: mariadb:11.4
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: ${DB_DATABASE:?Set DB_DATABASE in .env.production}
+      MARIADB_USER: ${DB_USERNAME:?Set DB_USERNAME in .env.production}
+      MARIADB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env.production}
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?Set DB_ROOT_PASSWORD in .env.production}
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN:?Set APP_DOMAIN in .env.production}
+      ACME_EMAIL: ${ACME_EMAIL:?Set ACME_EMAIL in .env.production}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+
+  duckdns:
+    image: lscr.io/linuxserver/duckdns:latest
+    restart: unless-stopped
+    environment:
+      PUID: "1000"
+      PGID: "1000"
+      TZ: UTC
+      SUBDOMAINS: ${DUCKDNS_SUBDOMAIN:?Set DUCKDNS_SUBDOMAIN in .env.production}
+      TOKEN: ${DUCKDNS_TOKEN:?Set DUCKDNS_TOKEN in .env.production}
+      LOG_FILE: "false"
+
+volumes:
+  app_uploads:
+  mariadb_data:
+  caddy_data:
+  caddy_config:

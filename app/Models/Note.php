@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Storage;
 
 #[Fillable([
     'title',
@@ -83,6 +82,6 @@ class Note extends Model
             return null;
         }
 
-        return Storage::disk('public')->url($this->audio_file);
+        return route('notes.audio', $this);
     }
 }

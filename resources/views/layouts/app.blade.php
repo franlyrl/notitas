@@ -107,6 +107,8 @@
             gap: 8px;
         }
 
+        .site-nav form { margin: 0; }
+
         .site-nav a:hover,
         .site-nav button:hover {
             background: var(--primary);
@@ -215,7 +217,7 @@
 
         .form-group { margin-bottom: 20px; }
         label { display: block; margin-bottom: 8px; color: var(--primary); font-weight: 700; }
-        input[type="text"], input[type="file"], select, textarea {
+        input[type="text"], input[type="email"], input[type="password"], input[type="file"], select, textarea {
             width: 100%;
             padding: 12px 14px;
             border: 1px solid rgba(140, 90, 60, 0.18);
@@ -225,7 +227,7 @@
             color: var(--text);
         }
         textarea { resize: vertical; min-height: 200px; }
-        input[type="text"]:focus, select:focus, textarea:focus {
+        input[type="text"]:focus, input[type="email"]:focus, input[type="password"]:focus, select:focus, textarea:focus {
             outline: none;
             border-color: rgba(140, 90, 60, 0.5);
             box-shadow: 0 0 0 4px rgba(140, 90, 60, 0.08);
@@ -251,6 +253,14 @@
         .btn-danger:hover { background: #c8665d; }
         .btn-secondary { background: #eee4d9; color: var(--text); }
         .btn-secondary:hover { background: #e2d7ca; }
+        .login-panel { max-width: 520px; margin: 0 auto; }
+        .google-login { width: 100%; background: #fff; border: 1px solid var(--border); color: var(--text); }
+        .google-login:hover { background: #f8f5f1; }
+        .google-mark { font: 700 1.1rem Arial, sans-serif; color: #4285f4; }
+        .login-divider { display: flex; align-items: center; gap: 12px; margin: 22px 0; color: var(--muted); font-size: 0.85rem; }
+        .login-divider::before, .login-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+        .remember-option { display: flex; align-items: center; gap: 10px; color: var(--muted); font-weight: 500; }
+        .remember-option input { width: 18px; height: 18px; accent-color: var(--primary); }
 
         .message {
             padding: 14px 16px;
@@ -298,8 +308,15 @@
                 </div>
 
                 <nav class="site-nav">
-                    <a href="{{ route('notes.index') }}">Inicio</a>
-                    <a href="{{ route('notes.create') }}" class="primary">Nueva nota</a>
+                    @auth
+                        <a href="{{ route('notes.index') }}">Inicio</a>
+                        <a href="{{ route('notes.create') }}" class="primary">Nueva nota</a>
+                        <a href="{{ route('settings.google-drive') }}">Drive</a>
+                        <form method="POST" action="{{ route('logout') }}">
+                            @csrf
+                            <button type="submit">Cerrar sesión</button>
+                        </form>
+                    @endauth
                 </nav>
             </div>
         </header>

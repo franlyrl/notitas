@@ -2,6 +2,8 @@
 
 return [
 
+    'audio_driver' => env('AUDIO_STORAGE_DRIVER', 'local'),
+
     /*
     |--------------------------------------------------------------------------
     | Default Filesystem Disk

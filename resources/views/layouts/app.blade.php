@@ -216,6 +216,8 @@
         }
 
         .form-group { margin-bottom: 20px; }
+        .note-editor { max-width: 880px; margin: 0 auto; }
+        .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 20px; }
         label { display: block; margin-bottom: 8px; color: var(--primary); font-weight: 700; }
         input[type="text"], input[type="email"], input[type="password"], input[type="file"], select, textarea {
             width: 100%;
@@ -227,6 +229,7 @@
             color: var(--text);
         }
         textarea { resize: vertical; min-height: 200px; }
+        .poem-editor { min-height: 340px; padding: 22px; background: #fffdf7; font: 1.15rem/1.9 Georgia, serif; }
         input[type="text"]:focus, input[type="email"]:focus, input[type="password"]:focus, select:focus, textarea:focus {
             outline: none;
             border-color: rgba(140, 90, 60, 0.5);
@@ -234,6 +237,21 @@
         }
 
         .button-group { display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
+        .creative-panel { margin: 24px 0; padding: 20px; border: 1px solid var(--border); border-radius: 16px; background: rgba(255,255,255,0.64); }
+        .creative-panel[hidden] { display: none; }
+        .creative-panel-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; margin-bottom: 16px; }
+        .creative-panel-heading h3 { margin-bottom: 4px; color: var(--primary); }
+        .creative-panel-heading p, .current-file { color: var(--muted); line-height: 1.5; }
+        .photo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; margin-top: 16px; }
+        .photo-grid img { display: block; width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 12px; border: 1px solid var(--border); background: white; }
+        .drawing-canvas { display: block; width: 100%; height: auto; aspect-ratio: 8 / 5; border: 1px solid var(--border); border-radius: 12px; background: white; touch-action: none; cursor: crosshair; }
+        .saved-drawing { display: block; width: 100%; max-height: 420px; object-fit: contain; margin-bottom: 14px; border-radius: 12px; background: white; }
+        .drawing-tools { display: flex; align-items: end; gap: 16px; flex-wrap: wrap; margin-top: 14px; }
+        .color-tool input { display: block; width: 52px; height: 42px; padding: 3px; border: 1px solid var(--border); border-radius: 8px; background: white; }
+        .brush-tool input { display: block; width: min(220px, 55vw); padding: 8px 0; }
+        .visually-hidden { position: absolute; width: 1px !important; height: 1px !important; padding: 0 !important; margin: -1px !important; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0 !important; }
+        .gallery-section, .drawing-section { margin: 24px 0; }
+        .gallery-section h3, .drawing-section h3 { color: var(--primary); margin-bottom: 12px; }
         button, .btn {
             padding: 12px 22px;
             border: none;
@@ -295,6 +313,12 @@
             .site-nav a { flex: 1; }
             main { padding: 20px 16px; }
             .page-header { margin-bottom: 18px; }
+            .form-grid { grid-template-columns: 1fr; gap: 0; }
+            .creative-panel { padding: 15px; }
+            .creative-panel-heading { flex-direction: column; }
+            .photo-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+            .drawing-tools { align-items: center; }
+            .button-group > * { flex: 1 1 100%; }
         }
     </style>
     @stack('extra_css')
@@ -312,7 +336,11 @@
                 </div>
 
                 <nav class="site-nav">
-                    @auth
+                    @if (! config('auth.enabled'))
+                        <a href="{{ route('notes.index') }}">Inicio</a>
+                        <a href="{{ route('notes.create') }}" class="primary">Nueva nota</a>
+                    @else
+                        @auth
                         <a href="{{ route('notes.index') }}">Inicio</a>
                         <a href="{{ route('notes.create') }}" class="primary">Nueva nota</a>
                         <a href="{{ route('settings.google-drive') }}">Drive</a>
@@ -320,7 +348,8 @@
                             @csrf
                             <button type="submit">Cerrar sesión</button>
                         </form>
-                    @endauth
+                        @endauth
+                    @endif
                 </nav>
             </div>
         </header>

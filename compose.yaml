@@ -5,6 +5,7 @@ services:
     environment:
       APP_NAME: Mi Journal
       APP_ENV: production
+      AUTH_ENABLED: ${AUTH_ENABLED:-true}
       APP_KEY: ${APP_KEY:?Set APP_KEY in .env.production}
       APP_DEBUG: "false"
       APP_URL: https://${APP_DOMAIN:?Set APP_DOMAIN in .env.production}
@@ -38,6 +39,7 @@ services:
       MAIL_FROM_NAME: ${MAIL_FROM_NAME:-Mi Journal}
     volumes:
       - app_uploads:/var/www/html/storage/app/public
+      - app_private_uploads:/var/www/html/storage/app/private
     depends_on:
       db:
         condition: service_healthy
@@ -88,6 +90,7 @@ services:
 
 volumes:
   app_uploads:
+  app_private_uploads:
   mariadb_data:
   caddy_data:
   caddy_config:

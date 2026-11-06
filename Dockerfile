@@ -29,7 +29,7 @@ COPY --from=assets /app/public/build ./public/build
 COPY apache-vhost.conf /etc/apache2/sites-available/000-default.conf
 
 RUN composer dump-autoload --no-dev --optimize \
-    && mkdir -p storage/app/public storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs bootstrap/cache \
+    && mkdir -p storage/app/public storage/app/private storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs bootstrap/cache \
     && chown -R www-data:www-data storage bootstrap/cache \
     && chmod -R ug+rwX storage bootstrap/cache
 

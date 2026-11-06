@@ -12,6 +12,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'note_type',
     'mood',
     'audio_file',
+    'gallery_images',
+    'drawing_file',
     'transcription',
     'transcription_status',
     'style',
@@ -26,6 +28,8 @@ class Note extends Model
         'text' => 'Texto',
         'audio' => 'Audio',
         'poem' => 'Poema',
+        'gallery' => 'Galería de fotos',
+        'drawing' => 'Dibujo',
     ];
 
     public const MOODS = [
@@ -59,6 +63,7 @@ class Note extends Model
     {
         return [
             'is_poetic' => 'boolean',
+            'gallery_images' => 'array',
         ];
     }
 

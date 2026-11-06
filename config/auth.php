@@ -4,6 +4,8 @@ use App\Models\User;
 
 return [
 
+    'enabled' => env('AUTH_ENABLED', true),
+
     /*
     |--------------------------------------------------------------------------
     | Authentication Defaults

@@ -7,6 +7,7 @@ use App\Services\GoogleDriveStorage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -15,7 +16,9 @@ class NoteController extends Controller
 {
     public function index(Request $request): View
     {
-        $notes = $request->user()->notes()->latest()->get();
+        $notes = $request->user()
+            ? $request->user()->notes()->latest()->get()
+            : Note::query()->latest()->get();
 
         return view('notes.index', [
             'notes' => $notes,
@@ -34,11 +37,18 @@ class NoteController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $data = $this->validated($request);
-        unset($data['audio_file']);
+        unset($data['audio_file'], $data['gallery_images'], $data['drawing_file']);
         $data['audio_file'] = $this->storeAudio($request);
+        $data['gallery_images'] = $this->storeGalleryImages($request);
+        $data['drawing_file'] = $this->storeDrawing($request);
+        $data['content'] ??= '';
         $data['is_poetic'] = ($data['note_type'] ?? 'text') === 'poem';
 
-        $request->user()->notes()->create($data);
+        if ($request->user()) {
+            $request->user()->notes()->create($data);
+        } else {
+            Note::query()->create($data);
+        }
 
         return redirect()->route('notes.index');
     }
@@ -64,6 +74,30 @@ class NoteController extends Controller
         return Storage::disk('public')->response($note->audio_file);
     }
 
+    public function galleryImage(Request $request, Note $note, int $index): StreamedResponse
+    {
+        $note = $this->ownedNote($request, $note);
+        $imagePath = $note->gallery_images[$index] ?? null;
+
+        abort_unless(is_string($imagePath) && Storage::disk('local')->exists($imagePath), 404);
+
+        return Storage::disk('local')->response($imagePath, null, [
+            'Cache-Control' => 'private, no-store',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
+    }
+
+    public function drawing(Request $request, Note $note): StreamedResponse
+    {
+        $note = $this->ownedNote($request, $note);
+        abort_unless($note->drawing_file && Storage::disk('local')->exists($note->drawing_file), 404);
+
+        return Storage::disk('local')->response($note->drawing_file, null, [
+            'Cache-Control' => 'private, no-store',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
+    }
+
     public function edit(Request $request, Note $note): View
     {
         $note = $this->ownedNote($request, $note);
@@ -78,7 +112,8 @@ class NoteController extends Controller
     {
         $note = $this->ownedNote($request, $note);
         $data = $this->validated($request);
-        unset($data['audio_file']);
+        unset($data['audio_file'], $data['gallery_images'], $data['drawing_file']);
+        $data['content'] ??= '';
         $data['is_poetic'] = ($data['note_type'] ?? $note->note_type) === 'poem';
 
         if ($path = $this->storeAudio($request)) {
@@ -86,6 +121,20 @@ class NoteController extends Controller
                 $this->deleteAudio($note->audio_file);
             }
             $data['audio_file'] = $path;
+        }
+
+        $newGalleryImages = $this->storeGalleryImages($request);
+
+        if ($newGalleryImages !== []) {
+            $data['gallery_images'] = array_merge($note->gallery_images ?? [], $newGalleryImages);
+        }
+
+        if ($drawingPath = $this->storeDrawing($request)) {
+            if ($note->drawing_file) {
+                Storage::disk('local')->delete($note->drawing_file);
+            }
+
+            $data['drawing_file'] = $drawingPath;
         }
 
         $note->update($data);
@@ -106,6 +155,12 @@ class NoteController extends Controller
 
         if ($note->audio_file) {
             $this->deleteAudio($note->audio_file);
+        }
+
+        Storage::disk('local')->delete($note->gallery_images ?? []);
+
+        if ($note->drawing_file) {
+            Storage::disk('local')->delete($note->drawing_file);
         }
 
         $note->delete();
@@ -235,18 +290,38 @@ TXT;
     {
         return $request->validate([
             'title' => ['nullable', 'string', 'max:200'],
-            'content' => ['required', 'string'],
-            'note_type' => ['nullable', 'in:text,audio,poem'],
+            'content' => ['nullable', 'string', 'required_unless:note_type,gallery,drawing'],
+            'note_type' => ['nullable', 'in:text,audio,poem,gallery,drawing'],
             'mood' => ['nullable', 'in:'.implode(',', array_keys(Note::MOODS))],
             'style' => ['nullable', 'in:'.implode(',', array_keys(Note::STYLES))],
             'font_style' => ['nullable', 'in:'.implode(',', array_keys(Note::FONTS))],
             'notes' => ['nullable', 'string'],
             'audio_file' => ['nullable', 'file', 'max:20480'],
+            'gallery_images' => ['sometimes', 'array', 'max:20'],
+            'gallery_images.*' => ['image', 'mimes:jpg,jpeg,png,webp', 'max:10240'],
+            'drawing_file' => ['nullable', 'image', 'mimes:png', 'max:5120'],
         ]);
+    }
+
+    /** @return array<int, string> */
+    private function storeGalleryImages(Request $request): array
+    {
+        return collect($request->file('gallery_images', []))
+            ->map(fn (UploadedFile $image): string => $image->store('galleries', 'local'))
+            ->all();
+    }
+
+    private function storeDrawing(Request $request): ?string
+    {
+        return $request->file('drawing_file')?->store('drawings', 'local');
     }
 
     private function ownedNote(Request $request, Note $note): Note
     {
+        if (! config('auth.enabled')) {
+            return $note;
+        }
+
         return $request->user()->notes()->findOrFail($note->getKey());
     }
 
